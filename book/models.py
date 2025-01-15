@@ -11,3 +11,6 @@ class Book(models.Model):
     cover = models.CharField(max_length=4, choices=COVER_CHOICES)
     inventory = models.PositiveIntegerField()
     daily_fee = models.DecimalField(max_digits=2, decimal_places=2)
+
+    def __str__(self) -> str:
+        return f"{self.title}, {self.author} ({self.inventory})"
