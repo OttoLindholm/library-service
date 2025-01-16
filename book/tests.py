@@ -10,7 +10,7 @@ BOOK_LIST_URL = reverse("book:book-list")
 
 class UnauthenticatedTests(TestCase):
     def setUp(self):
-        client = APIClient()
+        self.client = APIClient()
         self.book = Book.objects.create(
             title="Test Book",
             author="Test Author",
@@ -36,13 +36,13 @@ class UnauthenticatedTests(TestCase):
             BOOK_LIST_URL,
             data=data,
         )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_cannot_update_book(self):
         data = {"title": "Updated Title"}
         response = self.client.patch(self.book_url, data=data)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_cannot_delete_book(self):
         response = self.client.delete(self.book_url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
