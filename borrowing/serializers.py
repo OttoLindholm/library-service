@@ -20,6 +20,10 @@ class BorrowingSerializer(serializers.ModelSerializer):
             "user",
         ]
 
+    def validate(self, data: dict):
+        if data["book"].inventory <= 0:
+            raise serializers.ValidationError("Inventory must be greater than 0.")
+
 
 class BorrowingListSerializer(BorrowingSerializer):
     book = serializers.SlugRelatedField(slug_field="title", read_only=True)
