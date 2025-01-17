@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 
 from book.models import Book
 
-BOOK_LIST_URL = reverse("book:book-list")
+BOOK_LIST_URL = reverse("books:book-list")
 
 
 class UnauthenticatedTests(TestCase):
