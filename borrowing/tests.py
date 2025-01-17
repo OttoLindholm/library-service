@@ -24,6 +24,14 @@ def sample_book(**params):
     defaults.update(params)
     return Book.objects.create(**defaults)
 
+def sample_borrowing(user, book, borrow_date, expected_return_date, is_active=True):
+    return Borrowing.objects.create(
+        user=user,
+        book=book,
+        borrow_date=borrow_date,
+        expected_return_date=expected_return_date,
+        is_active=is_active,)
+
 
 class UnauthenticatedTests(TestCase):
     def setUp(self):
@@ -57,3 +65,45 @@ class AuthenticatedUserTests(TestCase):
 
         self.assertEqual(borrowing.user, self.user)
         self.assertEqual(borrowing.book.inventory, 0)
+
+class BorrowingFilterAndPermissionTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = get_user_model().objects.create_user(
+            email="user@test.com",
+            password="password123",
+        )
+        self.admin_user = get_user_model().objects.create_superuser(
+            email="admin@test.com",
+            password="adminpass",
+        )
+        self.client.force_authenticate(self.user)
+        self.book = sample_book()
+
+    def test_filter_is_active(self):
+        active_borrowing = sample_borrowing(
+            user=self.user,
+            book=self.book,
+            borrow_date=date.today(),
+            expected_return_date=date.today() + timedelta(days=7),
+            is_active=True,
+        )
+        inactive_borrowing = sample_borrowing(
+            user=self.user,
+            book=self.book,
+            borrow_date=date.today(),
+            expected_return_date=date.today() + timedelta(days=7),
+            is_active=False,
+        )
+
+        response = self.client.get(BORROWING_LIST_URL, {"is_active": "true"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], active_borrowing.id)
+
+        response = self.client.get(BORROWING_LIST_URL, {"is_active": "false"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], inactive_borrowing.id)
