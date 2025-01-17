@@ -1,6 +1,9 @@
 from datetime import date
 
 from rest_framework import viewsets, mixins
+from rest_framework import status
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from borrowing.permissions import IsOwnerOrAdmin
@@ -49,3 +52,24 @@ class BorrowingViewSet(
                 queryset = queryset.filter(user_id=user_id)
 
         return queryset
+
+    @action(detail=True, methods=["post"], url_path="return")
+    def return_book(self, request, pk=None):
+
+        borrowing = self.get_object()
+
+        if not borrowing.is_active:
+            return Response(
+                {"detail": "This book has already been returned."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        borrowing.actual_return_date = date.today()
+        borrowing.book.inventory += 1
+        borrowing.book.save()
+        borrowing.save()
+
+        return Response(
+            {"detail": "The book has been successfully returned."},
+            status=status.HTTP_200_OK,
+        )

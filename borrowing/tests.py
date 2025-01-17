@@ -160,3 +160,53 @@ class BorrowingFilterAndPermissionTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["id"], other_user_borrowing.id)
+
+
+class BorrowingReturnTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = get_user_model().objects.create_user(
+            email="user@test.com", password="password123"
+        )
+        self.client.force_authenticate(self.user)
+        self.book = sample_book()
+
+
+    def test_successful_return(self):
+
+        self.client.post(BORROWING_LIST_URL, data={
+            "user": self.user.id,
+            "book": self.book.id,
+            "borrow_date": date.today(),
+            "expected_return_date" : date.today() + timedelta(days=7)
+        })
+
+        borrowing = Borrowing.objects.first()
+
+
+        response = self.client.post(f"{BORROWING_LIST_URL}{borrowing.id}/return/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        borrowing.refresh_from_db()
+        self.book.refresh_from_db()
+
+        self.assertFalse(borrowing.is_active)
+        self.assertIsNotNone(borrowing.actual_return_date)
+        self.assertEqual(self.book.inventory, 1)
+
+    def test_cannot_return_already_returned_book(self):
+        returned = sample_borrowing(
+            user=self.user,
+            book=self.book,
+            borrow_date=date.today(),
+            expected_return_date=date.today() + timedelta(days=7),
+            actual_return_date=date.today() - timedelta(days=7),
+        )
+
+        response = self.client.post(f"{BORROWING_LIST_URL}{returned.id}/return/")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["detail"], "This book has already been returned."
+        )
