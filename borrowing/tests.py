@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from django.test import TestCase
 from rest_framework.test import APIClient
@@ -24,13 +24,21 @@ def sample_book(**params):
     defaults.update(params)
     return Book.objects.create(**defaults)
 
-def sample_borrowing(user, book, borrow_date, expected_return_date, is_active=True):
+
+def sample_borrowing(
+    user,
+    book,
+    borrow_date,
+    expected_return_date,
+    actual_return_date,
+):
     return Borrowing.objects.create(
         user=user,
         book=book,
         borrow_date=borrow_date,
         expected_return_date=expected_return_date,
-        is_active=is_active,)
+        actual_return_date=actual_return_date,
+    )
 
 
 class UnauthenticatedTests(TestCase):
@@ -66,6 +74,7 @@ class AuthenticatedUserTests(TestCase):
         self.assertEqual(borrowing.user, self.user)
         self.assertEqual(borrowing.book.inventory, 0)
 
+
 class BorrowingFilterAndPermissionTests(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -86,14 +95,14 @@ class BorrowingFilterAndPermissionTests(TestCase):
             book=self.book,
             borrow_date=date.today(),
             expected_return_date=date.today() + timedelta(days=7),
-            is_active=True,
+            actual_return_date=None,
         )
         inactive_borrowing = sample_borrowing(
             user=self.user,
             book=self.book,
             borrow_date=date.today(),
             expected_return_date=date.today() + timedelta(days=7),
-            is_active=False,
+            actual_return_date=date.today() - timedelta(days=5),
         )
 
         response = self.client.get(BORROWING_LIST_URL, {"is_active": "true"})
@@ -107,3 +116,47 @@ class BorrowingFilterAndPermissionTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["id"], inactive_borrowing.id)
+
+    def test_filter_by_user_id(self):
+        other_user = get_user_model().objects.create_user(
+            email="other@test.com",
+            password="password123",
+        )
+
+        sample_borrowing(
+            user=self.user,
+            book=self.book,
+            borrow_date=date.today(),
+            expected_return_date=date.today() + timedelta(days=7),
+            actual_return_date=date.today() + timedelta(days=5),
+        )
+        other_user_borrowing = sample_borrowing(
+            user=other_user,
+            book=self.book,
+            borrow_date=date.today(),
+            expected_return_date=date.today() + timedelta(days=7),
+            actual_return_date=date.today() + timedelta(days=5),
+        )
+
+        self.client.force_authenticate(self.admin_user)
+        response = self.client.get(
+            BORROWING_LIST_URL, {"user_id": other_user.id}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], other_user_borrowing.id)
+
+        response = self.client.get(
+            f"{BORROWING_LIST_URL}{other_user_borrowing.id}/"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.client.force_authenticate(other_user)
+        response = self.client.get(
+            BORROWING_LIST_URL, {"user_id": other_user.id}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], other_user_borrowing.id)
