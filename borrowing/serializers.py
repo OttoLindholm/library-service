@@ -10,6 +10,7 @@ from user.serializers import UserSerializer
 class BorrowingSerializer(serializers.ModelSerializer):
     book = serializers.PrimaryKeyRelatedField(queryset=Book.objects.all())
     user = serializers.PrimaryKeyRelatedField(read_only=True)
+    is_active = serializers.ReadOnlyField()
 
     class Meta:
         model = Borrowing
@@ -20,6 +21,7 @@ class BorrowingSerializer(serializers.ModelSerializer):
             "actual_return_date",
             "book",
             "user",
+            "is_active",
         ]
 
     def validate(self, data: dict):
