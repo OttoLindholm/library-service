@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.db import models
 from django.contrib.auth import get_user_model
 
@@ -17,3 +19,10 @@ class Borrowing(models.Model):
 
     def __str__(self) -> str:
         return f"{self.book.title} ({self.user.email})"
+
+    @property
+    def is_active(self):
+        return (
+            self.actual_return_date is None
+            or self.actual_return_date > date.today()
+        )
