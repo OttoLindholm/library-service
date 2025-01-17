@@ -5,6 +5,8 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 from borrowing.permissions import IsOwnerOrAdmin
 from borrowing.models import Borrowing
@@ -73,3 +75,20 @@ class BorrowingViewSet(
             {"detail": "The book has been successfully returned."},
             status=status.HTTP_200_OK,
         )
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "is_active",
+                type=OpenApiTypes.BOOL,
+                description="Filter by active borrowings (ex. ?is_active=true)",
+            ),
+            OpenApiParameter(
+                "user_id",
+                type=OpenApiTypes.INT,
+                description="Filter by user id for admins (ex. ?user_id=3)",
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
