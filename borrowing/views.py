@@ -1,6 +1,7 @@
 from rest_framework import viewsets, mixins
 from rest_framework.permissions import IsAuthenticated
 
+from borrowing.permissions import IsOwnerOrAdmin
 from borrowing.models import Borrowing
 from borrowing.serializers import (
     BorrowingSerializer,
@@ -17,7 +18,7 @@ class BorrowingViewSet(
 ):
     serializer_class = BorrowingSerializer
     queryset = Borrowing.objects.all()
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsOwnerOrAdmin)
 
     def get_serializer_class(self):
         if self.action == "list":
