@@ -64,8 +64,7 @@ class BorrowingViewSet(
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        borrowing.is_active = False
-        borrowing.return_date = date.today()
+        borrowing.actual_return_date = date.today()
         borrowing.book.inventory += 1
         borrowing.book.save()
         borrowing.save()
