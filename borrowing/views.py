@@ -1,3 +1,5 @@
+from datetime import date
+
 from rest_framework import viewsets, mixins
 from rest_framework.permissions import IsAuthenticated
 
@@ -32,6 +34,13 @@ class BorrowingViewSet(
         queryset = Borrowing.objects.all()
 
         if user.is_staff:
-            return queryset
+            queryset = queryset.filter(user=user)
 
-        return queryset.filter(user=user)
+        is_active = self.request.query_params.get("is_active")
+        if is_active is not None:
+            if is_active.lower() == "true":
+                queryset = [b for b in queryset if b.is_active]
+            elif is_active.lower() == "false":
+                queryset = [b for b in queryset if not b.is_active]
+
+        return queryset
